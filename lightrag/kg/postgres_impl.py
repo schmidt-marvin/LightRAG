@@ -1281,18 +1281,19 @@ class PGKVStorage(BaseKVStorage):
     async def initialize(self):
         if self.db is None:
             self.db = await ClientManager.get_client()
-            # Implement workspace priority: PostgreSQLDB.workspace > self.workspace > "default"
-            if self.db.workspace:
-                # Use PostgreSQLDB's workspace (highest priority)
-                final_workspace = self.db.workspace
-            elif hasattr(self, "workspace") and self.workspace:
-                # Use storage class's workspace (medium priority)
-                final_workspace = self.workspace
-                self.db.workspace = final_workspace
-            else:
-                # Use "default" for compatibility (lowest priority)
-                final_workspace = "default"
-                self.db.workspace = final_workspace
+            
+        # Changed workspace priority (experimental)
+        if hasattr(self, "workspace") and self.workspace:
+            # Use storage class's workspace (medium priority)
+            final_workspace = self.workspace
+            self.db.workspace = final_workspace
+        elif self.db.workspace:
+            # Use PostgreSQLDB's workspace (highest priority)
+            final_workspace = self.db.workspace
+        else:
+            # Use "default" for compatibility (lowest priority)
+            final_workspace = "default"
+            self.db.workspace = final_workspace
 
     async def finalize(self):
         if self.db is not None:
@@ -1633,9 +1634,9 @@ class PGKVStorage(BaseKVStorage):
                     "cache_type": v.get(
                         "cache_type", "extract"
                     ),  # Get cache_type from data
-                    "queryparam": json.dumps(v.get("queryparam"))
-                    if v.get("queryparam")
-                    else None,
+                    "queryparam": (
+                        json.dumps(v.get("queryparam")) if v.get("queryparam") else None
+                    ),
                 }
 
                 await self.db.execute(upsert_sql, _data)
@@ -1738,18 +1739,19 @@ class PGVectorStorage(BaseVectorStorage):
     async def initialize(self):
         if self.db is None:
             self.db = await ClientManager.get_client()
-            # Implement workspace priority: PostgreSQLDB.workspace > self.workspace > "default"
-            if self.db.workspace:
-                # Use PostgreSQLDB's workspace (highest priority)
-                final_workspace = self.db.workspace
-            elif hasattr(self, "workspace") and self.workspace:
-                # Use storage class's workspace (medium priority)
-                final_workspace = self.workspace
-                self.db.workspace = final_workspace
-            else:
-                # Use "default" for compatibility (lowest priority)
-                final_workspace = "default"
-                self.db.workspace = final_workspace
+            
+        # Changed workspace priority (experimental)
+        if hasattr(self, "workspace") and self.workspace:
+            # Use storage class's workspace (medium priority)
+            final_workspace = self.workspace
+            self.db.workspace = final_workspace
+        elif self.db.workspace:
+            # Use PostgreSQLDB's workspace (highest priority)
+            final_workspace = self.db.workspace
+        else:
+            # Use "default" for compatibility (lowest priority)
+            final_workspace = "default"
+            self.db.workspace = final_workspace
 
     async def finalize(self):
         if self.db is not None:
@@ -2041,18 +2043,19 @@ class PGDocStatusStorage(DocStatusStorage):
     async def initialize(self):
         if self.db is None:
             self.db = await ClientManager.get_client()
-            # Implement workspace priority: PostgreSQLDB.workspace > self.workspace > "default"
-            if self.db.workspace:
-                # Use PostgreSQLDB's workspace (highest priority)
-                final_workspace = self.db.workspace
-            elif hasattr(self, "workspace") and self.workspace:
-                # Use storage class's workspace (medium priority)
-                final_workspace = self.workspace
-                self.db.workspace = final_workspace
-            else:
-                # Use "default" for compatibility (lowest priority)
-                final_workspace = "default"
-                self.db.workspace = final_workspace
+
+        # Changed workspace priority (experimental)
+        if hasattr(self, "workspace") and self.workspace:
+            # Use storage class's workspace (medium priority)
+            final_workspace = self.workspace
+            self.db.workspace = final_workspace
+        elif self.db.workspace:
+            # Use PostgreSQLDB's workspace (highest priority)
+            final_workspace = self.db.workspace
+        else:
+            # Use "default" for compatibility (lowest priority)
+            final_workspace = "default"
+            self.db.workspace = final_workspace
 
     async def finalize(self):
         if self.db is not None:
@@ -2631,14 +2634,15 @@ class PGGraphStorage(BaseGraphStorage):
     async def initialize(self):
         if self.db is None:
             self.db = await ClientManager.get_client()
-            # Implement workspace priority: PostgreSQLDB.workspace > self.workspace > None
-            if self.db.workspace:
-                # Use PostgreSQLDB's workspace (highest priority)
-                final_workspace = self.db.workspace
-            elif hasattr(self, "workspace") and self.workspace:
+            
+            # Changed workspace priority (experimental)
+            if hasattr(self, "workspace") and self.workspace:
                 # Use storage class's workspace (medium priority)
                 final_workspace = self.workspace
                 self.db.workspace = final_workspace
+            elif self.db.workspace:
+                # Use PostgreSQLDB's workspace (highest priority)
+                final_workspace = self.db.workspace
             else:
                 # Use None for compatibility (lowest priority)
                 final_workspace = None
@@ -2893,7 +2897,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                      MATCH (n:base {entity_id: "%s"})
                      RETURN count(n) > 0 AS node_exists
-                   $$) AS (node_exists bool)""" % (self.graph_name, entity_name_label)
+                   $$) AS (node_exists bool)""" % (
+            self.graph_name,
+            entity_name_label,
+        )
 
         single_result = (await self._query(query))[0]
 
@@ -2923,7 +2930,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                      MATCH (n:base {entity_id: "%s"})
                      RETURN n
-                   $$) AS (n agtype)""" % (self.graph_name, label)
+                   $$) AS (n agtype)""" % (
+            self.graph_name,
+            label,
+        )
         record = await self._query(query)
         if record:
             node = record[0]
@@ -2945,7 +2955,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                      MATCH (n:base {entity_id: "%s"})-[r]-()
                      RETURN count(r) AS total_edge_count
-                   $$) AS (total_edge_count integer)""" % (self.graph_name, label)
+                   $$) AS (total_edge_count integer)""" % (
+            self.graph_name,
+            label,
+        )
         record = (await self._query(query))[0]
         if record:
             edge_count = int(record["total_edge_count"])
@@ -3115,7 +3128,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                      MATCH (n:base {entity_id: "%s"})
                      DETACH DELETE n
-                   $$) AS (n agtype)""" % (self.graph_name, label)
+                   $$) AS (n agtype)""" % (
+            self.graph_name,
+            label,
+        )
 
         try:
             await self._query(query, readonly=False)
@@ -3137,7 +3153,10 @@ class PGGraphStorage(BaseGraphStorage):
                      MATCH (n:base)
                      WHERE n.entity_id IN [%s]
                      DETACH DELETE n
-                   $$) AS (n agtype)""" % (self.graph_name, node_id_list)
+                   $$) AS (n agtype)""" % (
+            self.graph_name,
+            node_id_list,
+        )
 
         try:
             await self._query(query, readonly=False)
@@ -3159,7 +3178,11 @@ class PGGraphStorage(BaseGraphStorage):
             query = """SELECT * FROM cypher('%s', $$
                          MATCH (a:base {entity_id: "%s"})-[r]-(b:base {entity_id: "%s"})
                          DELETE r
-                       $$) AS (r agtype)""" % (self.graph_name, src_label, tgt_label)
+                       $$) AS (r agtype)""" % (
+                self.graph_name,
+                src_label,
+                tgt_label,
+            )
 
             try:
                 await self._query(query, readonly=False)
@@ -3190,7 +3213,10 @@ class PGGraphStorage(BaseGraphStorage):
                      UNWIND [%s] AS node_id
                      MATCH (n:base {entity_id: node_id})
                      RETURN node_id, n
-                   $$) AS (node_id text, n agtype)""" % (self.graph_name, formatted_ids)
+                   $$) AS (node_id text, n agtype)""" % (
+            self.graph_name,
+            formatted_ids,
+        )
 
         results = await self._query(query)
 
@@ -3601,7 +3627,10 @@ class PGGraphStorage(BaseGraphStorage):
         query = """SELECT * FROM cypher('%s', $$
                     MATCH (n:base {entity_id: "%s"})
                     RETURN id(n) as node_id, n
-                  $$) AS (node_id bigint, n agtype)""" % (self.graph_name, label)
+                  $$) AS (node_id bigint, n agtype)""" % (
+            self.graph_name,
+            label,
+        )
 
         node_result = await self._query(query)
         if not node_result or not node_result[0].get("n"):
